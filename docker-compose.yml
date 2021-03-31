@@ -1,0 +1,104 @@
+version: '3'
+services:
+
+  redis:
+    build: ./backend/redis
+    container_name: cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./backend/redis:/opt/redis 
+  
+ 
+  freepbx:
+    build: ./backend/freepbx
+    ports:
+      - 8080:80
+      - 5060:5060/udp
+      - 5160:5160/udp
+      - 3306:3306
+    restart: always
+    environment:
+      - ADMIN_PASSWORD=admin123
+    volumes:
+      - ./backend/freepbx/backup:/backup
+      - ./backend/freepbx/recordings:/var/spool/asterisk/monitor
+
+  
+    
+  rabbitmq:
+    image: rabbitmq:3.8-management
+    command: rabbitmq-server
+    ports:
+      - 5672:5672
+      - 15672:15672
+      - 4369:4369
+      - 25672:25672      
+  odoo:
+    image: odoo:14.0
+    container_name: erp
+    depends_on:
+      - db
+    ports:
+      - "8069:8069"
+  db:
+    image: postgres:10
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_PASSWORD=odoo
+      - POSTGRES_USER=odoo
+    ports:
+        - "5432:5432" 
+        
+              
+  mongo:
+    image: mongo
+    restart: always
+    ports:
+      - 27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: example
+  web:
+    build: ./backend/web
+    ports:
+      - 3000-3003:3000-3003
+      - 7000-7003:7000-7003      
+      - "2021:22"      
+    volumes:
+      - ./backend/web:/web  
+  
+      
+  ai:
+    build: ./backend/ai
+    ports:
+      - "5055:5055"
+      - "5005:5005"
+      - "5006:5006"
+      - "5002:5002"
+      - "5000:5000"
+      - "8888:8888"
+      - "2022:22"
+    
+    depends_on:
+      - duckling 
+      - redis
+      - rabbitmq      
+    volumes:
+      - ./backend/ai:/ai
+
+  duckling:
+    image: rasa/duckling
+    ports:
+      - "8000:8000"
+   
+  
